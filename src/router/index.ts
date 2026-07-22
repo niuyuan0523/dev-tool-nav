@@ -78,10 +78,10 @@ const router = createRouter({
   },
 })
 
-router.afterEach((to) => {
-  const base = 'DevNav · 程序员导航站 / 工具箱'
-  const title = to.meta.title as string | undefined
-  document.title = title ? `${title} · ${base}` : base
-})
+// router.afterEach((to) => {
+//   const base = 'DevNav · 程序员导航站 / 工具箱'
+//   const title = to.meta.title as string | undefined
+//   document.title = title ? `${title} · ${base}` : base
+// })
 
 export default router

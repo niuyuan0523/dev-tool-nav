@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import WeatherBackground from '@/components/WeatherBackground.vue'
 
 const theme = ref<'light' | 'dark'>('light')
 const sidebarOpen = ref(false)
@@ -14,6 +15,35 @@ interface Weather {
 }
 const weather = ref<Weather | null>(null)
 const weatherError = ref(false)
+
+/** 顶部励志文本：优先开放 API，失败回退内置 */
+const quote = ref('')
+const FALLBACK_QUOTES = [
+  '今天也要元气满满，加油！',
+  '慢慢来，比较快。',
+  '你已经很努力了，再坚持一下。',
+  '把每一件小事做好，就是了不起。',
+  '保持热爱，奔赴山海。',
+  '所有的努力，都不会被辜负。',
+  '别怕，光一直都在前面。',
+  '种一棵树最好的时间是十年前，其次是现在。',
+  '生活明朗，万物可爱，未来可期。',
+  '你想要的，岁月都会还给你。',
+]
+function randomQuote() {
+  return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)]
+}
+/** 一言 hitokoto：免费无 Key、支持跨域 */
+async function loadQuote() {
+  quote.value = randomQuote()
+  try {
+    const res = await fetch('https://v1.hitokoto.cn/?encode=json')
+    const data = await res.json()
+    if (data?.hitokoto) quote.value = data.hitokoto
+  } catch {
+    // 保留内置文本
+  }
+}
 
 /** WMO weather code → 图标与中文描述 */
 const WEATHER_MAP: Record<number, { icon: string; label: string }> = {
@@ -113,6 +143,7 @@ onMounted(() => {
   applyTheme(saved ?? (prefersDark ? 'dark' : 'light'))
   collapsed.value = localStorage.getItem('devnav-collapsed') === 'true'
   loadWeather()
+  loadQuote()
 })
 </script>
 
@@ -122,6 +153,8 @@ onMounted(() => {
     :class="{ collapsed }"
     :style="collapsed ? { '--sidebar-w': 'var(--sidebar-w-collapsed)' } : undefined"
   >
+    <WeatherBackground :code="weather?.code ?? null" />
+
     <AppSidebar
       :open="sidebarOpen"
       :collapsed="collapsed"
@@ -142,6 +175,10 @@ onMounted(() => {
         <span v-else class="weather weather-loading">
           {{ weatherError ? '天气获取失败' : '获取天气中…' }}
         </span>
+        <div class="spacer" />
+        <p v-if="quote" class="quote" :title="quote + '  ·  点击换一句'" @click="loadQuote">
+          {{ quote }}
+        </p>
         <div class="spacer" />
         <a
           class="icon-btn"
@@ -183,6 +220,8 @@ onMounted(() => {
   margin-left: var(--sidebar-w);
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
   transition: margin-left 0.24s ease;
 }
 
@@ -225,6 +264,28 @@ onMounted(() => {
 
 .spacer {
   flex: 1;
+}
+
+.quote {
+  margin: 0;
+  max-width: 46%;
+  font-size: 13px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.18s ease;
+}
+.quote::before {
+  content: '“';
+}
+.quote::after {
+  content: '”';
+}
+.quote:hover {
+  color: var(--text);
 }
 
 .icon-btn {
@@ -290,6 +351,9 @@ onMounted(() => {
     padding: 18px;
   }
   .weather-meta {
+    display: none;
+  }
+  .quote {
     display: none;
   }
 }
