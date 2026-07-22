@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import WeatherBackground from '@/components/WeatherBackground.vue'
@@ -7,6 +7,16 @@ import WeatherBackground from '@/components/WeatherBackground.vue'
 const theme = ref<'light' | 'dark'>('light')
 const sidebarOpen = ref(false)
 const collapsed = ref(false)
+
+// 实时本地时间：年月日 时:分:秒 星期，每秒刷新
+const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const now = ref(new Date())
+const nowText = computed(() => {
+  const d = now.value
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())} ${WEEKDAYS[d.getDay()]}`
+})
+let clockTimer: number | undefined
 
 interface Weather {
   temp: number
@@ -16,9 +26,8 @@ interface Weather {
 const weather = ref<Weather | null>(null)
 const weatherError = ref(false)
 
-/** 顶部励志文本：优先开放 API，失败回退内置 */
-const quote = ref('')
-const FALLBACK_QUOTES = [
+/** 顶部励志文本：正能量语句，优先开放 API（一言·哲学），失败/不合适回退内置 */
+const MOTIVATION_QUOTES = [
   '今天也要元气满满，加油！',
   '慢慢来，比较快。',
   '你已经很努力了，再坚持一下。',
@@ -29,20 +38,41 @@ const FALLBACK_QUOTES = [
   '种一棵树最好的时间是十年前，其次是现在。',
   '生活明朗，万物可爱，未来可期。',
   '你想要的，岁月都会还给你。',
+  '乾坤未定，你我皆是黑马。',
+  '星光不问赶路人，时光不负有心人。',
+  '道阻且长，行则将至；行而不辍，未来可期。',
+  '越努力，越幸运。',
+  '你只管努力，剩下的交给时间。',
+  '愿你成为自己的太阳，无需凭借谁的光。',
+  '不必介意一时得失，坚持到底才能看到曙光。',
+  '只要方向对了，慢一点也无妨。',
 ]
-function randomQuote() {
-  return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)]
+function randomQuote(exclude?: string): string {
+  if (MOTIVATION_QUOTES.length <= 1) return MOTIVATION_QUOTES[0]
+  let q = MOTIVATION_QUOTES[Math.floor(Math.random() * MOTIVATION_QUOTES.length)]
+  while (q === exclude) {
+    q = MOTIVATION_QUOTES[Math.floor(Math.random() * MOTIVATION_QUOTES.length)]
+  }
+  return q
 }
-/** 一言 hitokoto：免费无 Key、支持跨域 */
+// 初始即显示一条，避免首屏空白闪烁
+const quote = ref(randomQuote())
+/** 换一句：优先一言接口（不限分类），成功才一次性赋值；失败回退内置正能量句 */
 async function loadQuote() {
-  quote.value = randomQuote()
+  const current = quote.value
   try {
     const res = await fetch('https://v1.hitokoto.cn/?encode=json')
     const data = await res.json()
-    if (data?.hitokoto) quote.value = data.hitokoto
+    const text = (data?.hitokoto ?? '').trim()
+    if (text) {
+      quote.value = text + (data.from_who ? `  ——   ${data.from_who}` : '')
+      return
+    }
   } catch {
-    // 保留内置文本
+    // 忽略，走内置兜底
   }
+  // 接口失败或空：换一条与当前不同的内置正能量句
+  quote.value = randomQuote(current)
 }
 
 /** WMO weather code → 图标与中文描述 */
@@ -144,6 +174,12 @@ onMounted(() => {
   collapsed.value = localStorage.getItem('devnav-collapsed') === 'true'
   loadWeather()
   loadQuote()
+  clockTimer = window.setInterval(() => {
+    now.value = new Date()
+  }, 1000)
+})
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
 })
 </script>
 
@@ -175,8 +211,9 @@ onMounted(() => {
         <span v-else class="weather weather-loading">
           {{ weatherError ? '天气获取失败' : '获取天气中…' }}
         </span>
+        <span class="datetime">{{ nowText }}</span>
         <div class="spacer" />
-        <p v-if="quote" class="quote" :title="quote + '  ·  点击换一句'" @click="loadQuote">
+        <p v-if="quote" class="quote  mr-310" :title="quote + '  ·  点击换一句'" @click="loadQuote">
           {{ quote }}
         </p>
         <div class="spacer" />
@@ -261,6 +298,12 @@ onMounted(() => {
   color: var(--text-mute);
   font-size: 13px;
 }
+.datetime {
+  font-size: 13px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
 .spacer {
   flex: 1;
@@ -278,14 +321,13 @@ onMounted(() => {
   user-select: none;
   transition: color 0.18s ease;
 }
-.quote::before {
-  content: '“';
-}
-.quote::after {
-  content: '”';
-}
+
 .quote:hover {
   color: var(--text);
+}
+
+.mr-310 {
+  margin-right: 310px;
 }
 
 .icon-btn {
@@ -354,6 +396,9 @@ onMounted(() => {
     display: none;
   }
   .quote {
+    display: none;
+  }
+  .datetime {
     display: none;
   }
 }

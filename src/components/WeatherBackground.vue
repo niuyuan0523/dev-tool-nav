@@ -19,7 +19,7 @@ const SUNNY = [0, 1]
 
 const scene = computed<Scene>(() => {
   const c = props.code
-  if (c == null) return 'cloudy'
+  if (c == null) return 'sunny'
   if (SUNNY.includes(c)) return 'sunny'
   if (SNOW.includes(c)) return 'snow'
   if (RAIN.includes(c)) return 'rain'
