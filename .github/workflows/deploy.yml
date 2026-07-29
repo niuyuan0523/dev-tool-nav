@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  # PR 上也运行 build，供分支保护规则的 required status check 使用
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 # 授予 GITHUB_TOKEN 部署 Pages 所需权限
@@ -11,9 +14,9 @@ permissions:
   pages: write
   id-token: write
 
-# 同一时间仅保留一个部署，新推送取消进行中的旧部署
+# 同一时间仅保留一个部署，新推送取消进行中的旧部署；PR 按分支隔离
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,15 +38,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      # 以下两步仅在需要部署时执行（PR 上只验证构建）
       - name: Setup Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
+    # PR 上不部署，仅 push 到 master / 手动触发时执行
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:
