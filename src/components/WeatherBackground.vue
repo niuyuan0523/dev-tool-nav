@@ -3,21 +3,24 @@ import { computed } from 'vue'
 
 /**
  * 天气全局背景动效
- * 依据 WMO weather_code 映射到 4 个场景：sunny / cloudy / rain / snow
+ * 白天（浅色）依据 WMO weather_code 映射到 4 个场景：sunny / cloudy / rain / snow
  * - 晴：CSS 渐变光晕 + 旋转光芒
  * - 多云：SVG 云朵 + 视差平移
  * - 雨：JS 随机雨滴 + CSS 下落关键帧
  * - 雪：JS 随机雪花 + 飘落漂移
+ * 夜间模式（dark）：不再区分天气，统一展示月亮 + 星空
  */
-const props = defineProps<{ code: number | null }>()
+const props = defineProps<{ code: number | null; dark?: boolean }>()
 
-type Scene = 'sunny' | 'cloudy' | 'rain' | 'snow'
+type Scene = 'sunny' | 'cloudy' | 'rain' | 'snow' | 'night'
 
 const RAIN = [51, 53, 55, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]
 const SNOW = [71, 73, 75, 77, 85, 86]
 const SUNNY = [0, 1]
 
 const scene = computed<Scene>(() => {
+  // 夜间模式下无视天气代码，统一展示月亮
+  if (props.dark) return 'night'
   const c = props.code
   if (c == null) return 'sunny'
   if (SUNNY.includes(c)) return 'sunny'
@@ -60,6 +63,22 @@ const flakes: Flake[] = Array.from({ length: 42 }, () => ({
   opacity: rand(0.4, 0.9),
 }))
 
+// 夜间星空：随机小星星（位置 / 大小 / 闪烁节奏）
+interface Star {
+  left: number
+  top: number
+  size: number
+  delay: number
+  dur: number
+}
+const stars: Star[] = Array.from({ length: 46 }, () => ({
+  left: rand(0, 100),
+  top: rand(0, 62),
+  size: rand(1, 2.6),
+  delay: rand(-4, 0),
+  dur: rand(2.4, 5),
+}))
+
 // 云朵配置（多云 / 雨天顶部共用）
 const clouds = [
   { top: 8, scale: 1, dur: 82, delay: 0, opacity: 0.9 },
@@ -70,8 +89,35 @@ const clouds = [
 
 <template>
   <div class="weather-bg" :class="scene" aria-hidden="true">
+    <!-- 夜间：月亮 + 星空（不分晴/雨/雪） -->
+    <template v-if="scene === 'night'">
+      <div class="stars">
+        <span
+          v-for="(s, i) in stars"
+          :key="i"
+          class="star"
+          :style="{
+            left: s.left + '%',
+            top: s.top + '%',
+            width: s.size + 'px',
+            height: s.size + 'px',
+            animationDuration: s.dur + 's',
+            animationDelay: s.delay + 's',
+          }"
+        />
+      </div>
+      <div class="moon">
+        <div class="moon-glow" />
+        <div class="moon-body">
+          <span class="crater c1" />
+          <span class="crater c2" />
+          <span class="crater c3" />
+        </div>
+      </div>
+    </template>
+
     <!-- 晴天：光晕 + 旋转光芒 -->
-    <template v-if="scene === 'sunny'">
+    <template v-else-if="scene === 'sunny'">
       <div class="sun">
         <div class="sun-rays" />
         <div class="sun-core" />
@@ -244,6 +290,122 @@ const clouds = [
   }
 }
 
+/* ---------- 夜间：月亮 + 星空 ---------- */
+.weather-bg.night {
+  background:
+    radial-gradient(
+      900px 640px at 80% -12%,
+      rgba(148, 163, 210, 0.22),
+      rgba(90, 104, 160, 0.08) 46%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(28, 34, 62, 0.42), rgba(15, 17, 23, 0.12) 60%, transparent);
+}
+.moon {
+  position: absolute;
+  top: -40px;
+  right: 8%;
+  width: 180px;
+  height: 180px;
+  animation: moon-float 12s ease-in-out infinite;
+}
+.moon-glow {
+  position: absolute;
+  inset: -34%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(226, 232, 255, 0.5),
+    rgba(196, 208, 245, 0.18) 44%,
+    transparent 68%
+  );
+  filter: blur(2px);
+  animation: moon-pulse 6s ease-in-out infinite;
+}
+.moon-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 34%,
+    #fdfcf5,
+    #eef1fb 46%,
+    #cfd6ec 78%,
+    #b7c0dd
+  );
+  box-shadow:
+    inset -14px -12px 28px rgba(120, 132, 172, 0.5),
+    0 0 26px rgba(210, 220, 255, 0.35);
+}
+.crater {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(150, 160, 195, 0.4);
+  box-shadow: inset 1px 1px 2px rgba(110, 120, 155, 0.55);
+}
+.crater.c1 {
+  top: 26%;
+  left: 30%;
+  width: 26px;
+  height: 26px;
+}
+.crater.c2 {
+  top: 54%;
+  left: 52%;
+  width: 34px;
+  height: 34px;
+}
+.crater.c3 {
+  top: 62%;
+  left: 26%;
+  width: 16px;
+  height: 16px;
+}
+@keyframes moon-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+@keyframes moon-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+.stars {
+  position: absolute;
+  inset: 0;
+}
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+  animation-name: star-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* ---------- 多云 / 雨天云朵 ---------- */
 .weather-bg.cloudy {
   background: linear-gradient(180deg, rgba(120, 140, 170, 0.22), transparent 56%);
@@ -338,6 +500,11 @@ const clouds = [
     height: 150px;
     top: -50px;
   }
+  .moon {
+    width: 124px;
+    height: 124px;
+    top: -28px;
+  }
   .cloud {
     width: 150px;
   }
@@ -348,7 +515,10 @@ const clouds = [
   .sun,
   .sun-core,
   .sun-rays,
-  .cloud {
+  .cloud,
+  .moon,
+  .moon-glow,
+  .star {
     animation: none !important;
   }
   .rainfall,

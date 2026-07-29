@@ -4,6 +4,29 @@ import { RouterLink } from 'vue-router'
 import { navCategories } from '@/data/navigation'
 import { tools } from '@/data/tools'
 import LinkCard from '@/components/LinkCard.vue'
+import { useFavorites } from '@/composables/useFavorites'
+
+const { favorites, remove, addCustom } = useFavorites()
+
+/** 自定义收藏站点表单 */
+const showFavForm = ref(false)
+const favForm = ref({ name: '', url: '', desc: '', icon: '' })
+const favError = ref('')
+
+const submitFav = () => {
+  favError.value = ''
+  const ok = addCustom(favForm.value)
+  if (!ok) {
+    favError.value = !favForm.value.name.trim()
+      ? '请填写站点名称'
+      : !favForm.value.url.trim()
+        ? '请填写站点地址'
+        : '该站点已在收藏中'
+    return
+  }
+  favForm.value = { name: '', url: '', desc: '', icon: '' }
+  showFavForm.value = false
+}
 
 type SourceId = 'local' | 'baidu' | 'google' | 'bing'
 interface SearchSource {
@@ -135,6 +158,44 @@ const onSubmit = () => {
         </button>
         <button v-if="!isLocal" type="submit" class="search-go">搜索</button>
       </form>
+    </section>
+
+    <!-- 收藏置顶：自定义 + 已收藏站点 -->
+    <section v-if="!isFiltering" id="favorites" class="block">
+      <div class="block-head">
+        <h3><span class="block-emoji">⭐</span> 我的收藏</h3>
+        <span class="count">{{ favorites.length }}</span>
+        <button type="button" class="fav-add-btn" @click="showFavForm = !showFavForm">
+          {{ showFavForm ? '✕ 取消' : '＋ 添加收藏' }}
+        </button>
+      </div>
+
+      <form v-if="showFavForm" class="fav-form" @submit.prevent="submitFav">
+        <input v-model="favForm.name" class="field" type="text" placeholder="站点名称 *" />
+        <input v-model="favForm.url" class="field" type="text" placeholder="站点地址（如 example.com）*" />
+        <input v-model="favForm.icon" class="field fav-form-icon" type="text" placeholder="图标 emoji" />
+        <input v-model="favForm.desc" class="field" type="text" placeholder="描述（选填）" />
+        <button type="submit" class="btn btn-primary fav-form-submit">添加</button>
+        <span v-if="favError" class="fav-form-err">{{ favError }}</span>
+      </form>
+
+      <div v-if="favorites.length" class="grid">
+        <div v-for="l in favorites" :key="l.url" class="fav-item">
+          <LinkCard :link="l" />
+          <button
+            type="button"
+            class="fav-del"
+            title="移除收藏"
+            aria-label="移除收藏"
+            @click="remove(l.url)"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <p v-else class="fav-empty">
+        还没有收藏——点击任意导航卡片右上角的 ☆，或“＋ 添加收藏”自定义站点。
+      </p>
     </section>
 
     <!-- 在线工具入口 -->
@@ -414,5 +475,87 @@ const onSubmit = () => {
   margin-top: 40px;
   text-align: center;
   color: var(--text-mute);
+}
+
+/* ===== 收藏区 ===== */
+.fav-add-btn {
+  margin-left: auto;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--text-soft);
+  font-size: 13px;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+.fav-add-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.fav-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+}
+.fav-form .field {
+  width: auto;
+  flex: 1 1 160px;
+}
+.fav-form-icon {
+  flex: 0 0 96px !important;
+}
+.fav-form-submit {
+  flex: 0 0 auto;
+}
+.fav-form-err {
+  flex-basis: 100%;
+  color: #e5484d;
+  font-size: 12px;
+}
+.fav-item {
+  position: relative;
+}
+.fav-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-elev);
+  color: var(--text-mute);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  box-shadow: var(--shadow);
+  transition:
+    opacity 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+.fav-item:hover .fav-del {
+  opacity: 1;
+}
+.fav-del:hover {
+  color: #e5484d;
+  border-color: #e5484d;
+}
+.fav-empty {
+  margin: 4px 0 0;
+  color: var(--text-mute);
+  font-size: 13px;
 }
 </style>

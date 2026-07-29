@@ -189,7 +189,7 @@ onUnmounted(() => {
     :class="{ collapsed }"
     :style="collapsed ? { '--sidebar-w': 'var(--sidebar-w-collapsed)' } : undefined"
   >
-    <WeatherBackground :code="weather?.code ?? null" />
+    <WeatherBackground :code="weather?.code ?? null" :dark="theme === 'dark'" />
 
     <AppSidebar
       :open="sidebarOpen"
@@ -219,10 +219,10 @@ onUnmounted(() => {
         <div class="spacer" />
         <a
           class="icon-btn"
-          href="https://github.com/"
+          href="https://github.com/niuyuan0523/dev-tool-nav"
           target="_blank"
           rel="noreferrer"
-          title="GitHub"
+          title="GitHub 仓库"
           >🐙</a
         >
         <button
@@ -241,6 +241,18 @@ onUnmounted(() => {
           </transition>
         </RouterView>
       </main>
+
+      <footer class="page-foot">
+        <a
+          class="page-foot-link"
+          href="https://github.com/niuyuan0523/dev-tool-nav"
+          target="_blank"
+          rel="noreferrer"
+          title="前往 GitHub 仓库"
+        >
+          MVP · Vue 3 + Vite + TS · v0.1
+        </a>
+      </footer>
     </div>
   </div>
 </template>
@@ -355,6 +367,26 @@ onUnmounted(() => {
 .content {
   padding: 28px;
   flex: 1;
+}
+
+/* 页面最底部版本信息：弱化展示，随内容滚动才可见，不长期占用可视区 */
+.page-foot {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 18px 24px 24px;
+}
+.page-foot-link {
+  color: var(--text-mute);
+  font-size: 12px;
+  opacity: 0.7;
+  transition:
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+.page-foot-link:hover {
+  color: var(--primary);
+  opacity: 1;
 }
 
 .scrim {

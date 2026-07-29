@@ -38,6 +38,18 @@ const isCategoryActive = (id: string) => route.path === '/' && route.hash === `#
       <p class="nav-label">🧭 网址导航</p>
       <div class="nav-group">
         <RouterLink
+          :to="{ path: '/', hash: '#favorites' }"
+          class="nav-item"
+          active-class=""
+          exact-active-class=""
+          :class="{ 'is-active': isCategoryActive('favorites') }"
+          title="我的收藏"
+          @click="emit('close')"
+        >
+          <span class="nav-emoji">⭐</span>
+          <span class="nav-text">我的收藏</span>
+        </RouterLink>
+        <RouterLink
           v-for="c in navCategories"
           :key="c.id"
           :to="{ path: '/', hash: `#${c.id}` }"
@@ -53,11 +65,6 @@ const isCategoryActive = (id: string) => route.path === '/' && route.hash === `#
         </RouterLink>
       </div>
     </nav>
-
-    <footer class="side-foot">
-      <span class="nav-text">MVP · Vue 3 + Vite + TS</span>
-      <span class="foot-mini">v0.1</span>
-    </footer>
 
     <button
       class="collapse-handle"
@@ -194,20 +201,6 @@ const isCategoryActive = (id: string) => route.path === '/' && route.hash === `#
   text-overflow: ellipsis;
 }
 
-.side-foot {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-  color: var(--text-mute);
-  font-size: 12px;
-}
-.foot-mini {
-  display: none;
-}
-
 /* 贴在侧边栏右侧边缘的收起/展开手柄，随侧栏宽度移动 */
 .collapse-handle {
   position: fixed;
@@ -294,13 +287,6 @@ const isCategoryActive = (id: string) => route.path === '/' && route.hash === `#
   }
   .sidebar.collapsed .nav-label:first-child {
     margin-top: 8px;
-  }
-  .sidebar.collapsed .side-foot {
-    justify-content: center;
-    padding: 14px 0;
-  }
-  .sidebar.collapsed .foot-mini {
-    display: inline;
   }
 }
 
