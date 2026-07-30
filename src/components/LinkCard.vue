@@ -14,6 +14,12 @@ function hostOf(url: string): string {
   }
 }
 
+/** 图标是否为图片地址（http(s)/data/本地路径），是则用 <img> 渲染 */
+function isImageIcon(icon?: string): boolean {
+  if (!icon) return false
+  return /^(https?:\/\/|data:image\/|\/|\.\/)/i.test(icon.trim())
+}
+
 /** 阻止冒泡与默认跳转，仅切换收藏状态 */
 function onToggle(e: MouseEvent) {
   e.preventDefault()
@@ -24,7 +30,16 @@ function onToggle(e: MouseEvent) {
 
 <template>
   <a class="card" :href="link.url" target="_blank" rel="noreferrer">
-    <span class="card-icon">{{ link.icon ?? '🔗' }}</span>
+    <span class="card-icon">
+      <img
+        v-if="isImageIcon(link.icon)"
+        class="card-icon-img"
+        :src="link.icon"
+        alt=""
+        loading="lazy"
+      />
+      <template v-else>{{ link.icon ?? '🔗' }}</template>
+    </span>
     <span class="card-body">
       <span class="card-name">{{ link.name }}</span>
       <span class="card-desc">{{ link.desc ?? hostOf(link.url) }}</span>
@@ -74,6 +89,13 @@ function onToggle(e: MouseEvent) {
   border-radius: 11px;
   background: var(--bg-soft);
   font-size: 20px;
+  overflow: hidden;
+}
+.card-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 .card-body {
   display: flex;

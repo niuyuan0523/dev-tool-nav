@@ -4,18 +4,45 @@ import { RouterLink } from 'vue-router'
 import { navCategories } from '@/data/navigation'
 import { tools } from '@/data/tools'
 import LinkCard from '@/components/LinkCard.vue'
-import { useFavorites } from '@/composables/useFavorites'
+import { useFavorites, type FavoriteLink } from '@/composables/useFavorites'
 
-const { favorites, remove, addCustom } = useFavorites()
+const { favorites, remove, addCustom, update } = useFavorites()
 
-/** 自定义收藏站点表单 */
+/** 自定义收藏站点表单（editingUrl 非空表示编辑模式） */
 const showFavForm = ref(false)
 const favForm = ref({ name: '', url: '', desc: '', icon: '' })
 const favError = ref('')
+const editingUrl = ref('')
+
+const resetFavForm = () => {
+  favForm.value = { name: '', url: '', desc: '', icon: '' }
+  favError.value = ''
+  editingUrl.value = ''
+}
+
+const toggleFavForm = () => {
+  if (showFavForm.value) {
+    showFavForm.value = false
+    resetFavForm()
+  } else {
+    resetFavForm()
+    showFavForm.value = true
+  }
+}
+
+/** 进入编辑：回填表单并展开 */
+const startEditFav = (l: FavoriteLink) => {
+  favForm.value = { name: l.name, url: l.url, desc: l.desc ?? '', icon: l.icon ?? '' }
+  favError.value = ''
+  editingUrl.value = l.url
+  showFavForm.value = true
+}
 
 const submitFav = () => {
   favError.value = ''
-  const ok = addCustom(favForm.value)
+  const ok = editingUrl.value
+    ? update(editingUrl.value, favForm.value)
+    : addCustom(favForm.value)
   if (!ok) {
     favError.value = !favForm.value.name.trim()
       ? '请填写站点名称'
@@ -24,7 +51,7 @@ const submitFav = () => {
         : '该站点已在收藏中'
     return
   }
-  favForm.value = { name: '', url: '', desc: '', icon: '' }
+  resetFavForm()
   showFavForm.value = false
 }
 
@@ -165,7 +192,7 @@ const onSubmit = () => {
       <div class="block-head">
         <h3><span class="block-emoji">⭐</span> 我的收藏</h3>
         <span class="count">{{ favorites.length }}</span>
-        <button type="button" class="fav-add-btn" @click="showFavForm = !showFavForm">
+        <button type="button" class="fav-add-btn" @click="toggleFavForm">
           {{ showFavForm ? '✕ 取消' : '＋ 添加收藏' }}
         </button>
       </div>
@@ -173,15 +200,31 @@ const onSubmit = () => {
       <form v-if="showFavForm" class="fav-form" @submit.prevent="submitFav">
         <input v-model="favForm.name" class="field" type="text" placeholder="站点名称 *" />
         <input v-model="favForm.url" class="field" type="text" placeholder="站点地址（如 example.com）*" />
-        <input v-model="favForm.icon" class="field fav-form-icon" type="text" placeholder="图标 emoji" />
+        <input
+          v-model="favForm.icon"
+          class="field fav-form-icon"
+          type="text"
+          placeholder="图标 emoji 或图片 URL"
+        />
         <input v-model="favForm.desc" class="field" type="text" placeholder="描述（选填）" />
-        <button type="submit" class="btn btn-primary fav-form-submit">添加</button>
+        <button type="submit" class="btn btn-primary fav-form-submit">
+          {{ editingUrl ? '保存' : '添加' }}
+        </button>
         <span v-if="favError" class="fav-form-err">{{ favError }}</span>
       </form>
 
       <div v-if="favorites.length" class="grid">
         <div v-for="l in favorites" :key="l.url" class="fav-item">
           <LinkCard :link="l" />
+          <button
+            type="button"
+            class="fav-edit"
+            title="编辑收藏"
+            aria-label="编辑收藏"
+            @click="startEditFav(l)"
+          >
+            ✎
+          </button>
           <button
             type="button"
             class="fav-del"
@@ -510,7 +553,7 @@ const onSubmit = () => {
   flex: 1 1 160px;
 }
 .fav-form-icon {
-  flex: 0 0 96px !important;
+  flex: 0 0 170px !important;
 }
 .fav-form-submit {
   flex: 0 0 auto;
@@ -523,10 +566,10 @@ const onSubmit = () => {
 .fav-item {
   position: relative;
 }
-.fav-del {
+.fav-del,
+.fav-edit {
   position: absolute;
   top: -6px;
-  right: -6px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
@@ -546,12 +589,23 @@ const onSubmit = () => {
     color 0.16s ease,
     border-color 0.16s ease;
 }
-.fav-item:hover .fav-del {
+.fav-del {
+  right: -6px;
+}
+.fav-edit {
+  right: 22px;
+}
+.fav-item:hover .fav-del,
+.fav-item:hover .fav-edit {
   opacity: 1;
 }
 .fav-del:hover {
   color: #e5484d;
   border-color: #e5484d;
+}
+.fav-edit:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 .fav-empty {
   margin: 4px 0 0;

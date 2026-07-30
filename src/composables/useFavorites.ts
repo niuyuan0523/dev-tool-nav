@@ -72,6 +72,28 @@ export function useFavorites() {
     return true
   }
 
+  /** 编辑收藏站点，返回是否成功（名称、URL 非空且不与其它收藏重复） */
+  const update = (
+    originalUrl: string,
+    input: { name: string; url: string; desc?: string; icon?: string },
+  ) => {
+    const idx = favorites.value.findIndex((f) => f.url === originalUrl)
+    if (idx === -1) return false
+    const url = normalizeUrl(input.url)
+    const name = input.name.trim()
+    if (!url || !name) return false
+    if (url !== originalUrl && isFavorite(url)) return false
+    favorites.value[idx] = {
+      ...favorites.value[idx],
+      name,
+      url,
+      desc: input.desc?.trim() || undefined,
+      icon: input.icon?.trim() || '⭐',
+    }
+    persist()
+    return true
+  }
+
   return {
     favorites: computed(() => favorites.value),
     isFavorite,
@@ -79,5 +101,6 @@ export function useFavorites() {
     remove,
     toggle,
     addCustom,
+    update,
   }
 }
