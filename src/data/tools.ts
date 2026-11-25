@@ -61,4 +61,11 @@ export const tools: ToolMeta[] = [
     emoji: '🔗',
     path: '/tools/url',
   },
+  {
+    id: 'interface',
+    name: 'TS Interface 生成',
+    desc: 'YApi 接口 / JSON 转 TypeScript 类型定义',
+    emoji: '🧬',
+    path: '/tools/interface',
+  },
 ]

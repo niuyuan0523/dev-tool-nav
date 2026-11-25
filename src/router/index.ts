@@ -62,6 +62,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'URL 编解码' },
   },
   {
+    path: '/tools/interface',
+    name: 'tool-interface',
+    component: () => import('@/tools/InterfaceTool.vue'),
+    meta: { title: 'TS Interface 生成' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },
